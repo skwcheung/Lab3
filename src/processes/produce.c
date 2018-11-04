@@ -27,22 +27,26 @@ int push_to_queue(int value, mqd_t mq){
 }
 
 /* Function producers will call to determine values to push*/
-int produce_values(int id,int num_producers,int input_array[],int size, mqd_t mq,qname){
+int produce_values(int id,int num_producers,int input_array[],int size, mqd_t mq,char* qname){
 	/* Open message queue at beginning of produce_values */
 	mq  = mq_open(qname, O_WRONLY);
+	int itr;
 	if (mq == -1 ) {
 		perror("mq_open() failed");
 		exit(1);
 	}
 
-	for(int itr = 0;itr < size;itr++){
+	for(itr=0;itr < size;itr++){
 		if(itr%num_producers==id){
 			push_to_queue(itr,mq);
 		}
 	}
 
 	/* cleanup */
-    CHECK((mqd_t)-1 != mq_close(mq));
+    if(mq_close(mq) == -1){
+	exit(1);
+	printf("Error: Could not close queue");
+    }	
 }
 
 int main(int argc, char *argv[])
