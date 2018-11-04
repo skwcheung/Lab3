@@ -16,6 +16,32 @@
 
 double g_time[2];
 
+/* Function to write message to pipe */
+int push_to_queue(int value, mqd_t mq){
+	if(mq_send(mq, (char *) &value, sizeof(value),0) == -1){
+		perror("Error: Send message failed");
+	}
+	printf("Produced value %d to queue",value);
+}
+
+/* Function producers will call to determine values to push*/
+int produce_values(int id,int num_producers,int input_array[],int size, mqd_t mq,){
+	/* Open message queue at beginning of produce_values */
+	mq  = mq_open(qname, O_WRONLY)
+	if (mq == -1 ) {
+		perror("mq_open() failed");
+		exit(1);
+	}
+	int itr;
+	for(itr = 0;itr < size;itr++){
+		if(itr%num_producers==id){
+			push_to_queue(itr,mq);
+		}
+	}
+
+	/* cleanup */
+    CHECK((mqd_t)-1 != mq_close(mq));
+}
 
 int main(int argc, char *argv[])
 {
@@ -25,6 +51,25 @@ int main(int argc, char *argv[])
 	int num_c;
 	int i;
 	struct timeval tv;
+	mqd_t mq;
+	mode_t mode = S_IRUSR | S_IWUSR;
+    struct mq_attr attr;
+    char buffer[MAX_SIZE + 1];
+
+
+    /* initialize the queue attributes */
+    attr.mq_flags = 0;
+    attr.mq_maxmsg = 100;
+    attr.mq_msgsize = sizeof(int);
+    attr.mq_curmsgs = 0;
+
+    /* create the message queue */
+    mq = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, mode, &attr);
+	if (qdes == -1 ) {
+		perror("mq_open() failed");
+		exit(1);
+	}
+
 
 	if (argc != 5) {
 		printf("Usage: %s <N> <B> <P> <C>\n", argv[0]);
