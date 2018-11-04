@@ -15,6 +15,7 @@
 #include <math.h>
 
 double g_time[2];
+int MAX_SIZE = 10;
 
 /* Function to write message to pipe */
 int push_to_queue(int value, mqd_t mq){
@@ -25,7 +26,7 @@ int push_to_queue(int value, mqd_t mq){
 }
 
 /* Function producers will call to determine values to push*/
-int produce_values(int id,int num_producers,int input_array[],int size, mqd_t mq,){
+int produce_values(int id,int num_producers,int input_array[],int size, mqd_t mq){
 	/* Open message queue at beginning of produce_values */
 	mq  = mq_open(qname, O_WRONLY)
 	if (mq == -1 ) {
@@ -55,6 +56,7 @@ int main(int argc, char *argv[])
 	mode_t mode = S_IRUSR | S_IWUSR;
     struct mq_attr attr;
     char buffer[MAX_SIZE + 1];
+	char  *QUEUE_NAME = "/queue";
 
 
     /* initialize the queue attributes */
@@ -65,7 +67,7 @@ int main(int argc, char *argv[])
 
     /* create the message queue */
     mq = mq_open(QUEUE_NAME, O_CREAT | O_RDONLY, mode, &attr);
-	if (qdes == -1 ) {
+	if (mq == -1 ) {
 		perror("mq_open() failed");
 		exit(1);
 	}
