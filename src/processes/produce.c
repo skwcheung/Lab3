@@ -16,6 +16,7 @@
 
 double g_time[2];
 int MAX_SIZE = 10;
+char  *QUEUE_NAME = "/queue";
 
 /* Function to write message to pipe */
 int push_to_queue(int value, mqd_t mq){
@@ -26,15 +27,15 @@ int push_to_queue(int value, mqd_t mq){
 }
 
 /* Function producers will call to determine values to push*/
-int produce_values(int id,int num_producers,int input_array[],int size, mqd_t mq){
+int produce_values(int id,int num_producers,int input_array[],int size, mqd_t mq,qname){
 	/* Open message queue at beginning of produce_values */
-	mq  = mq_open(qname, O_WRONLY)
+	mq  = mq_open(qname, O_WRONLY);
 	if (mq == -1 ) {
 		perror("mq_open() failed");
 		exit(1);
 	}
-	int itr;
-	for(itr = 0;itr < size;itr++){
+
+	for(int itr = 0;itr < size;itr++){
 		if(itr%num_producers==id){
 			push_to_queue(itr,mq);
 		}
@@ -56,8 +57,6 @@ int main(int argc, char *argv[])
 	mode_t mode = S_IRUSR | S_IWUSR;
     struct mq_attr attr;
     char buffer[MAX_SIZE + 1];
-	char  *QUEUE_NAME = "/queue";
-
 
     /* initialize the queue attributes */
     attr.mq_flags = 0;
