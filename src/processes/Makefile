@@ -2,9 +2,9 @@
 # Yiqing Huang, 2014/07/16
 
 CC = gcc
-CFLAGS = -Wall -g #-DDEBUG_1
+CFLAGS = -Wall -g -std=c99 #-DDEBUG_1
 LD = gcc
-LDFLAGS = -g 
+LDFLAGS = -g -std=c99
 LDLIBS = -lrt -lpthread -lm
 
 SRCS   = produce.c 
