@@ -42,7 +42,7 @@ int recieve_from_queue(mqd_t mq,char* qname){
 
 		return -1;
 	} else {
-		printf("Recieved value %d",value);
+		printf("\nRecieved value %d",value);
 		return value;
 	}
 }
@@ -52,7 +52,7 @@ int push_to_queue(int value, mqd_t mq){
 	if(mq_send(mq, (char *) &value, sizeof(value),0) == -1){
 		perror("Error: Send message failed");
 	}
-	printf("Produced value %d to queue",value);
+	printf("\nProduced value %d to queue",value);
 }
 
 /* Function producers will call to determine values to push*/
@@ -169,7 +169,6 @@ int main(int argc, char *argv[]){
 	g_time[0] = (tv.tv_sec) + tv.tv_usec/1000000.;
 
 	/* create the message queue */
-	printf("Attempting mq_open first time");
     mq = mq_open(qname, O_RDWR | O_CREAT , mode, &attr);
 	if (mq == -1 ) {
 		perror("mq_open() failed");
