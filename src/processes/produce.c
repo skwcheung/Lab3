@@ -19,9 +19,8 @@ double g_time[2];
 int MAX_SIZE = 10;
 
 int check_sqrt(int value){
-	double result;
-	result = sqrt(value);
-	if(result == value)
+	double result = sqrt(value);
+	if((int)result == result)
 		return value;
 	else	
 		return 0;
@@ -42,30 +41,27 @@ int recieve_from_queue(char* qname){
 
 		return -1;
 	} else {
-		printf("\nRecieved value %d",value);
+		// printf("\nRecieved value %d",value);
 		return value;
 	}
 }
 
 /* Function producers will call to determine values to push */
 int produce_values(int id,int num_producers,int size,char* qname,struct mq_attr attr){
-	printf("\n Calling produce_values");
 	/* Open message queue at beginning of produce_values */
 	mqd_t mq = mq_open(qname, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR, &attr);
 	if(mq == -1){
 		printf("Producer with id: %d failed mq_open()\n", id);
 	}
 
-	int itr;
-	for(itr=0;itr < size;itr++){
-		if(itr%num_producers==id){
-			if(mq_send(mq, (char *) &itr, sizeof(int),0) == -1){
-				perror("Error: Send message failed");
-			}
+	int itr = id;
+	while(itr <= size){
+		// printf("\nProduced value %d to queue from producer %d",itr,id);
+		if(mq_send(mq, (char *) &itr, sizeof(int),0) == -1){
+			perror("Error: Send message failed");
+		}
+		itr+=num_producers;
 	}
-	printf("\nProduced value %d to queue",itr);
-	}
-
 	/* cleanup */
     if(mq_close(mq) == -1){
 	exit(1);
@@ -73,22 +69,20 @@ int produce_values(int id,int num_producers,int size,char* qname,struct mq_attr 
     }	
 }
 
-int consume_values(int id, char* qname,struct mq_attr attr){
+int consume_values(int id, int num, char* qname,struct mq_attr attr){
 	int value;
 	mqd_t mq = mq_open(qname, O_RDONLY | O_CREAT, S_IRUSR | S_IWUSR, &attr);
 			if(mq == -1){
-				printf("Consumer with id: %d failed mq_open() for qname1\n",1);
+				printf("Consumer with id: %d failed mq_open() for qname\n",1);
 			}
 	int counter = 0;
-	while(counter < 25){
+	while(counter <= num){
 		value = recieve_from_queue(qname);
+		int root = check_sqrt(value);
+		if(root){
+			printf("\n %d %d %d",id,value,root);
+		}
 		counter++;
-	}
-	
-
-	int root = check_sqrt(value);
-	if(root){
-		printf("&d &d &d",id,value,root);
 	}
 
 	if (mq_close(mq) == -1) {
@@ -111,6 +105,7 @@ int create_producers(int num_of_producers,int num,char* qname,struct mq_attr att
 		}
 		else if(pid == 0){
 			/* child process: PRODUCER */
+			// printf("\n Created producer with id %d",id);
 			produce_values(id,num_of_producers,num,qname,attr);
 
 			/* Tell this process to finish */
@@ -119,7 +114,7 @@ int create_producers(int num_of_producers,int num,char* qname,struct mq_attr att
 	}
 }
 
-int create_consumers(int num_of_consumers, char* qname, struct mq_attr attr){
+int create_consumers(int num_of_consumers, int num, char* qname, struct mq_attr attr){
 	int id;
 	for(int consumer = 0;consumer < num_of_consumers;consumer++){
 		id = consumer;
@@ -131,7 +126,7 @@ int create_consumers(int num_of_consumers, char* qname, struct mq_attr attr){
 		}
 		else if(pid == 0){
 			/* Child process */
-			consume_values(id,qname,attr);
+			consume_values(id,num,qname,attr);
 			exit(0);
 		}
 	}
@@ -171,22 +166,24 @@ int main(int argc, char *argv[]){
 
 	gettimeofday(&tv, NULL);
 	g_time[0] = (tv.tv_sec) + tv.tv_usec/1000000.;
-	if(mq_unlink(qname)){
-		printf("mq_unlink() for qname1 failed\n");
-	}
+	// if(mq_unlink(qname)){
+	// 	printf("mq_unlink() for qname failed\n");
+	// }
 
 	create_producers(num_p,num,qname,attr);
-	create_consumers(num_c,qname,attr);
+	create_consumers(num_c,num,qname,attr);
+
+	while(wait(NULL)>0);
 
 	if(mq_unlink(qname)){
-		printf("mq_unlink() for qname1 failed\n");
+		printf("mq_unlink() for qname failed\n");
 	}
 
 
     gettimeofday(&tv, NULL);
     g_time[1] = (tv.tv_sec) + tv.tv_usec/1000000.;
 
-    printf("System execution time: %.6lf seconds\n", \
+    printf("\n System execution time: %.6lf seconds\n", \
             g_time[1] - g_time[0]);
 	exit(0);
 }
