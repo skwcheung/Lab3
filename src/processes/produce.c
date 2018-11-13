@@ -50,7 +50,7 @@ int produce_values(int id, int num_producers, int size, char *qname, struct mq_a
 	mqd_t mq = mq_open(qname, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR, &attr);
 	if (mq == -1)
 	{
-		printf("Producer with id: %d failed mq_open()\n", id);
+		perror("Producer failed to open message queue");
 	}
 
 	int itr = id;
@@ -69,10 +69,11 @@ int produce_values(int id, int num_producers, int size, char *qname, struct mq_a
 	if (mq_close(mq) == -1)
 	{
 		exit(1);
-		printf("Error: Could not close queue");
+		perror("Error: Could not close queue");
 	}
 }
 
+/* Open message queue and poll mq to recieve new values and check for square root */
 int consume_values(int id, int num, char *qname, char *qname2, struct mq_attr attr, struct mq_attr attr2)
 {
 	int value;
@@ -81,10 +82,10 @@ int consume_values(int id, int num, char *qname, char *qname2, struct mq_attr at
 	mqd_t mq = mq_open(qname, O_RDONLY | O_CREAT, S_IRUSR | S_IWUSR, &attr);
 	if (mq == -1)
 	{
-		printf("Consumer with id: %d failed to open message queue\n", id);
+		perror("Consumer failed to open message queue");
 	}
 
-	/* Consume numbers until producers are done */
+	/* Consume numbers until recieving the kill signal */
 	while (1)
 	{
 		value = recieve_from_queue(mq);
@@ -106,7 +107,7 @@ int consume_values(int id, int num, char *qname, char *qname2, struct mq_attr at
 	}
 }
 
-/* Loop through and fork num_p times to create num_p producer processes */
+/* Create a produer process and then return the child's PID */
 int create_producers(int id, int num_of_producers, int num, char *qname, struct mq_attr attr)
 {
 	pid_t pid;
@@ -115,6 +116,7 @@ int create_producers(int id, int num_of_producers, int num, char *qname, struct 
 	if (pid < 0){
 		perror("fork failed");
 	}
+
 	/* These are child processes that will run until completion and exit 0 to let parent know they are done */
 	else if (pid == 0)
 	{
@@ -124,6 +126,7 @@ int create_producers(int id, int num_of_producers, int num, char *qname, struct 
 	return pid;
 }
 
+/* Create a consumer process and then return the child's PID */
 int create_consumers(int id,int num_of_consumers, int num, char *qname, char *qname2, struct mq_attr attr, struct mq_attr attr2)
 {
 	pid_t pid;
@@ -131,6 +134,7 @@ int create_consumers(int id,int num_of_consumers, int num, char *qname, char *qn
 	if (pid < 0){
 		perror("fork failed");
 	}
+
 	/* These are child processes that will run until completion and exit 0 to let parent know they are done */
 	else if (pid == 0){
 		consume_values(id, num, qname, qname2, attr, attr2);
@@ -148,9 +152,7 @@ int main(int argc, char *argv[])
 	int nums_produced = 0;
 	int id;
 	struct timeval tv;
-	// TODO: make unique names
 	char *qname = "/message_skwcheun";
-	char *qname2 = "/produced_skwcheun";
 	struct mq_attr attr;
 	struct mq_attr attr2;
 	char buffer[MAX_SIZE + 1];
@@ -178,6 +180,7 @@ int main(int argc, char *argv[])
 
 	mqd_t mq = mq_open(qname, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR, &attr);
 
+	/* Loop through and producer all processes for producer and consumer while storing their pids */
 	int producers_pid[num_p]; 
 	int consumers_pid[num_c];
 
@@ -189,27 +192,25 @@ int main(int argc, char *argv[])
 		consumers_pid[id] = create_consumers(id,num_c, num, qname, qname2, attr, attr2);
 	}	
 	
-	
-	/* WAIT FOR ALL PRODUCERS TO COMPLETE */
+	/* Wait for all producers to complete */
 	for(id = 0;id < num_p; id++){
 		wait(producers_pid[id]);
-		// printf("Producer %d finished \n",id);
 	}
 
 	int kill_sig = -1;
+
+	/* Once producers are done, send kill signal to every consumer */
 	for(id = 0; id < num_c; ++id){
 		if (mq_send(mq, (char *)&kill_sig, sizeof(int), 0) == -1){
 			perror("Error with sending kill:");
 		}
 	}
 
+	/* Wait on every consumer to recieve kill signal and die */
 	for(id = 0; id < num_c; id++){
 		wait(consumers_pid[id]);
-		// printf("Consumer %d finished \n",id);
 	}
-	// NOW WE KNOW THERE ARE NO MORE ITEMS TO BE PRODUCERS 
 
-	// TODO close pq and mq before unlinking them
 	if (mq_close(mq) == -1)
 	{
 		perror("Error: Could not close queue");
