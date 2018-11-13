@@ -74,7 +74,7 @@ int produce_values(int id, int num_producers, int size, char *qname, struct mq_a
 }
 
 /* Open message queue and poll mq to recieve new values and check for square root */
-int consume_values(int id, int num, char *qname, char *qname2, struct mq_attr attr, struct mq_attr attr2)
+int consume_values(int id, int num, char *qname, struct mq_attr attr)
 {
 	int value;
 
@@ -127,7 +127,7 @@ int create_producers(int id, int num_of_producers, int num, char *qname, struct 
 }
 
 /* Create a consumer process and then return the child's PID */
-int create_consumers(int id,int num_of_consumers, int num, char *qname, char *qname2, struct mq_attr attr, struct mq_attr attr2)
+int create_consumers(int id,int num_of_consumers, int num, char *qname, struct mq_attr attr)
 {
 	pid_t pid;
 	pid = fork();
@@ -137,7 +137,7 @@ int create_consumers(int id,int num_of_consumers, int num, char *qname, char *qn
 
 	/* These are child processes that will run until completion and exit 0 to let parent know they are done */
 	else if (pid == 0){
-		consume_values(id, num, qname, qname2, attr, attr2);
+		consume_values(id, num, qname, attr);
 		exit(0);
 	}
 	return pid;
@@ -154,7 +154,6 @@ int main(int argc, char *argv[])
 	struct timeval tv;
 	char *qname = "/message_skwcheun";
 	struct mq_attr attr;
-	struct mq_attr attr2;
 	char buffer[MAX_SIZE + 1];
 
 	if (argc != 5)
@@ -189,7 +188,7 @@ int main(int argc, char *argv[])
 	}
 
 	for(id = 0; id < num_c; id++){
-		consumers_pid[id] = create_consumers(id,num_c, num, qname, qname2, attr, attr2);
+		consumers_pid[id] = create_consumers(id,num_c, num, qname, attr);
 	}	
 	
 	/* Wait for all producers to complete */
